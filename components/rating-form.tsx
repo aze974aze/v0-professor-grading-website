@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StarRating } from "@/components/star-rating";
-import { useData } from "@/lib/data-context";
+import { submitRating } from "@/app/actions/professor";
 
 interface RatingFormProps {
-  professorId: string;
+  professorId: number;
   onSuccess?: () => void;
 }
 
@@ -20,7 +20,6 @@ const categories = [
 ] as const;
 
 export function RatingForm({ professorId, onSuccess }: RatingFormProps) {
-  const { addRating } = useData();
   const [ratings, setRatings] = useState({
     teachingQuality: 0,
     communication: 0,
@@ -29,6 +28,7 @@ export function RatingForm({ professorId, onSuccess }: RatingFormProps) {
     difficulty: 0,
   });
   const [submitted, setSubmitted] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const handleRatingChange = (category: keyof typeof ratings, value: number) => {
     setRatings((prev) => ({ ...prev, [category]: value }));
@@ -39,25 +39,31 @@ export function RatingForm({ professorId, onSuccess }: RatingFormProps) {
   const handleSubmit = () => {
     if (!isComplete) return;
 
-    addRating({
-      professorId,
-      ...ratings,
+    startTransition(async () => {
+      try {
+        await submitRating({
+          professorId,
+          ...ratings,
+        });
+
+        setSubmitted(true);
+        onSuccess?.();
+
+        // Reset after showing success
+        setTimeout(() => {
+          setSubmitted(false);
+          setRatings({
+            teachingQuality: 0,
+            communication: 0,
+            availability: 0,
+            helpfulness: 0,
+            difficulty: 0,
+          });
+        }, 2000);
+      } catch (error) {
+        console.error("Failed to submit rating:", error);
+      }
     });
-
-    setSubmitted(true);
-    onSuccess?.();
-
-    // Reset after showing success
-    setTimeout(() => {
-      setSubmitted(false);
-      setRatings({
-        teachingQuality: 0,
-        communication: 0,
-        availability: 0,
-        helpfulness: 0,
-        difficulty: 0,
-      });
-    }, 2000);
   };
 
   if (submitted) {
@@ -101,11 +107,11 @@ export function RatingForm({ professorId, onSuccess }: RatingFormProps) {
 
         <Button
           onClick={handleSubmit}
-          disabled={!isComplete}
+          disabled={!isComplete || isPending}
           className="w-full"
           size="lg"
         >
-          Submit Rating
+          {isPending ? "Submitting..." : "Submit Rating"}
         </Button>
         
         {!isComplete && (

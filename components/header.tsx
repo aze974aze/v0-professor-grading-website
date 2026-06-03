@@ -6,16 +6,24 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/auth-context";
 import { AuthModal } from "@/components/auth-modal";
 import { useState } from "react";
-import { User, LogOut } from "lucide-react";
+import { LogOut, Shield } from "lucide-react";
 
 export function Header() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, isLoading, logout } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
+
+  const initials = user?.name
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase();
 
   return (
     <>
@@ -31,16 +39,37 @@ export function Header() {
           </Link>
 
           <nav className="flex items-center gap-4">
-            {isAuthenticated ? (
+            {isLoading ? (
+              <div className="h-9 w-20 animate-pulse rounded-md bg-muted" />
+            ) : isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="gap-2">
-                    <User className="h-4 w-4" />
+                    <Avatar className="h-7 w-7">
+                      {user?.image && (
+                        <AvatarImage src={user.image} alt={user.name} />
+                      )}
+                      <AvatarFallback className="text-xs">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
                     <span className="hidden sm:inline">{user?.name}</span>
+                    {isAdmin && (
+                      <Shield className="h-4 w-4 text-primary" />
+                    )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={logout} className="gap-2">
+                  {isAdmin && (
+                    <>
+                      <DropdownMenuItem className="gap-2 text-muted-foreground" disabled>
+                        <Shield className="h-4 w-4" />
+                        Admin
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  <DropdownMenuItem onClick={() => logout()} className="gap-2">
                     <LogOut className="h-4 w-4" />
                     Sign out
                   </DropdownMenuItem>
